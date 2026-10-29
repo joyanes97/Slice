@@ -17,22 +17,9 @@ struct Device3DSection: View {
 
     var body: some View {
         Group {
-            PanelSection("3D device", trailing: AnyView(enableToggle)) {
+            PanelSection("3D device", trailing: AnyView(header)) {
                 if let warning { warning }
-                if s.enabled {
-                    ModelPicker(editor: editor)
-                } else {
-                    let preview = offPreview
-                    Device3DThumbnail(model: preview, finish: preview == s.model ? s.finish : preview.finishes[0],
-                                      placement: preview.kind == .laptop ? Device3DPlacement(yaw: -20, pitch: -14)
-                                          : Device3DPlacement(yaw: 22, pitch: 6),
-                                      size: preview.kind == .laptop ? CGSize(width: 220, height: 150) : CGSize(width: 140, height: 170))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                    PanelNote(editor.available3DKinds == [.laptop]
-                        ? "Show this screen recording on a 3D MacBook. The recording isn't changed, so you can turn it off at any time."
-                        : "Show this recording on a 3D iPhone or Mac. The recording isn't changed, so you can turn it off at any time.")
-                }
+                if s.enabled { ModelPicker(editor: editor) } else { offState }
             }
             if s.enabled {
                 PanelDivider()
@@ -40,36 +27,20 @@ struct Device3DSection: View {
                     PosePresets(editor: editor)
                     if s.model.kind == .laptop { LidControl(editor: editor) }
                     KeyframeBar(editor: editor)
-                    MoreOptions("Adjust", id: "device3D.adjust") {
-                        Device3DPoseSliders(editor: editor)
+                    MoreOptions("Fine-tune", id: "device3D.adjust") {
+                        Device3DPoseFields(editor: editor)
                     }
                 }
                 PanelDivider()
                 motion
                 PanelDivider()
                 look
-                credits
-                Button("Reset all 3D settings") {
-                    withAnimation(Theme.move) {
-                        var fresh = Device3DSettings()
-                        fresh.enabled = true
-                        fresh.model = s.model
-                        fresh.finish = s.model.finishes[0]
-                        fresh.placement = s.model.defaultPlacement
-                        editor.removeAllKeyframes()
-                        editor.project.device3D = fresh
-                    }
-                }
-                .buttonStyle(.plain)
-                .font(.system(size: 12))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 2)
+                footer
             }
         }
-        .animation(.snappy, value: s.enabled)
-        .animation(.snappy, value: s.animation.motion)
-        .animation(.snappy, value: s.background)
+        .animation(Theme.swap, value: s.enabled)
+        .animation(Theme.swap, value: s.animation.motion)
+        .animation(Theme.swap, value: s.background)
     }
 
     private func bind<T>(_ keyPath: WritableKeyPath<Device3DSettings, T>) -> Binding<T> {
@@ -82,12 +53,52 @@ struct Device3DSection: View {
         return editor.available3DKinds.first.map { Device3DModel.models($0)[0] } ?? s.model
     }
 
-    private var enableToggle: some View {
-        Toggle("3D device", isOn: Binding(get: { s.enabled }, set: { on in withAnimation(.snappy) { editor.enable3D(on) } }))
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .tint(Theme.accent)
+    private var header: some View {
+        HStack(spacing: 6) {
+            if s.enabled {
+                Button(action: addRecording) { Image(systemName: "plus") }
+                    .buttonStyle(IconButtonStyle(size: 24, iconSize: 11))
+                    .disabled(editor.deviceImportProgress != nil)
+                    .help(Self.addHelp)
+                    .transition(.opacity)
+            }
+            Toggle("3D device", isOn: Binding(get: { s.enabled }, set: { on in withAnimation(Theme.swap) { editor.enable3D(on) } }))
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .tint(Theme.accent)
+        }
+    }
+
+    private var offState: some View {
+        let laptop = offPreview.kind == .laptop
+        return VStack(spacing: 6) {
+            Image(systemName: laptop ? "laptopcomputer" : "iphone")
+                .font(.system(size: 20, weight: .light))
+                .foregroundStyle(.tertiary)
+                .padding(.bottom, 4)
+            Text("Off").font(.system(size: 13, weight: .medium))
+            Text(laptop ? "Turn on to show this recording on a MacBook." : "Turn on to show this recording on an iPhone or Mac.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button("Add a recording…", action: addRecording)
+                .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .disabled(editor.deviceImportProgress != nil)
+                .help(Self.addHelp)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+
+    private static let addHelp = "Add a screen recording from your iPhone or Mac. An iPhone's is framed and goes on the 3D iPhone."
+
+    private func addRecording() {
+        guard let url = chooseVideos(message: "Choose a screen recording from your iPhone or Mac.", multiple: false)?.first else { return }
+        Task { await editor.importOnto3D(url) }
     }
 
     private var warning: AnyView? {
@@ -107,28 +118,38 @@ struct Device3DSection: View {
         }
     }
 
-    /// The models are used under CC BY 4.0, which asks that their makers are credited.
-    private var credits: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            ForEach(Device3DModel.allCases, id: \.self) { model in
-                HStack(spacing: 4) {
-                    Text("\(model.label) model by")
-                    Link(model.credit.author, destination: model.credit.url)
-                        .foregroundStyle(Theme.accent)
+    /// The models' licences ask that their makers are credited.
+    private var footer: some View {
+        HStack(spacing: 4) {
+            Text("Model by")
+            Link(s.model.credit.author, destination: s.model.credit.url)
+            Text("·")
+            Link(s.model.license.name, destination: s.model.license.url)
+            Spacer(minLength: 8)
+            Button("Reset all") {
+                withAnimation(Theme.slide) {
+                    var fresh = Device3DSettings()
+                    fresh.enabled = true
+                    fresh.model = s.model
+                    fresh.finish = s.model.finishes[0]
+                    fresh.placement = s.model.defaultPlacement
+                    editor.removeAllKeyframes()
+                    editor.project.device3D = fresh
                 }
             }
-            Link("Licensed under CC BY 4.0", destination: URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
-                .foregroundStyle(.tertiary)
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Put every 3D setting back as it started, and remove the keyframes")
         }
         .font(.system(size: 11))
         .foregroundStyle(.tertiary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .lineLimit(1)
         .padding(.top, 4)
     }
 
     private var resetPose: some View {
         Button {
-            withAnimation(Theme.move) { editor.setPlacement(s.model.defaultPlacement) }
+            withAnimation(Theme.slide) { editor.setPlacement(s.model.defaultPlacement) }
         } label: { Image(systemName: "arrow.counterclockwise") }
             .buttonStyle(IconButtonStyle(size: 24, iconSize: 11))
             .help("Put the device back in the middle, as it started")
@@ -140,24 +161,14 @@ struct Device3DSection: View {
         PanelSection("Motion") {
             SegmentedControl(selection: bind(\.animation.motion), options: Device3DMotion.allCases, title: \.label)
             if s.animation.motion != .none {
-                PanelSlider(s.animation.motion == .sway ? "Swing time" : "Float time", value: bind(\.animation.duration),
-                            in: Device3DAnimation.durationRange, default: Device3DAnimation().duration) {
-                    String(format: "%.1fs", $0)
-                }
+                PanelSlider("Duration", value: bind(\.animation.duration), in: Device3DAnimation.durationRange,
+                            default: Device3DAnimation().duration) { String(format: "%.1fs", $0) }
                 if s.animation.motion == .sway {
                     PanelSlider("Swing", value: bind(\.animation.swing), in: Device3DAnimation.swingRange,
                                 default: Device3DAnimation().swing) { "\(Int($0.rounded()))°" }
-                } else {
-                    PanelSlider("Amount", value: bind(\.animation.amount), in: 0 ... 1, default: Device3DAnimation().amount) {
-                        percent($0, of: 0 ... 1)
-                    }
-                }
-                if s.animation.motion == .sway {
-                    MotionPicker(easing: bind(\.animation.easing), curve: bind(\.animation.curve), duration: s.animation.duration,
-                                 id: "device3D.swayMotion")
-                }
-                if s.animation.motion == .sway {
                     MoreOptions(id: "device3D.motion") {
+                        MotionPicker(easing: bind(\.animation.easing), curve: bind(\.animation.curve), duration: s.animation.duration,
+                                     id: "device3D.swayMotion")
                         HStack {
                             Text("Starts towards").font(.system(size: 13))
                             Spacer()
@@ -167,6 +178,10 @@ struct Device3DSection: View {
                         PanelSlider("Pause at each side", value: bind(\.animation.hold), in: 0 ... 0.8, default: Device3DAnimation().hold) {
                             $0 < 0.01 ? "None" : percent($0, of: 0 ... 1)
                         }
+                    }
+                } else {
+                    PanelSlider("Amount", value: bind(\.animation.amount), in: 0 ... 1, default: Device3DAnimation().amount) {
+                        percent($0, of: 0 ... 1)
                     }
                 }
             }
@@ -187,7 +202,7 @@ struct Device3DSection: View {
                             editor.project.device3D.backgroundColor = RGBA(ns.redComponent, ns.greenComponent, ns.blueComponent)
                         }), supportsOpacity: false)
                         .labelsHidden()
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                        .transition(.opacity)
                 }
             }
             MoreOptions("Light and shadow", id: "device3D.look") {

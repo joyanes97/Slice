@@ -11,7 +11,19 @@ export const MODEL_LICENSE = {
 	url: "https://creativecommons.org/licenses/by/4.0/",
 };
 
+export const STANDARD_LICENSE = {
+	name: "Sketchfab Standard",
+	url: "https://sketchfab.com/licenses",
+};
+
 export const MODELS: ModelCredit[] = [
+	{
+		model: "iPhone 18 Pro Max",
+		title: "Apple iPhone 18 Pro Max Burgundy 2026",
+		author: "extraakash",
+		authorURL: "https://sketchfab.com/AakashMansukhani",
+		url: "https://sketchfab.com/3d-models/apple-iphone-18-pro-max-burgundy-2026-604acc18b5d5455d820a16359b45b003",
+	},
 	{
 		model: "MacBook Neo",
 		title: "Apple Macbook Neo 2026",

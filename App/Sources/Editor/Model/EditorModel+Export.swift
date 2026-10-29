@@ -14,7 +14,7 @@ extension EditorModel {
         var added: [Clip] = []
         for url in urls {
             do {
-                added.append(try await ClipImporter.importVideo(url, into: bundle))
+                added.append(try await importTake(url))
             } catch {
                 transcribeError = "Couldn't import \(url.lastPathComponent): \(error.localizedDescription)"
             }

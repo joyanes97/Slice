@@ -197,7 +197,7 @@ final class Device3DTests: XCTestCase {
 
     func testEveryModelLoadsAndShowsTheRecordingUprightFrontAndNotThroughItsBack() throws {
         let out = CGSize(width: 540, height: 960)
-        let screenAspect: [Device3DModel: Double] = [.iPhone17ProMax: 1320.0 / 2868, .iPhoneAir: 1260.0 / 2736, .iPhone16ProMax: 1320.0 / 2868,
+        let screenAspect: [Device3DModel: Double] = [.iPhone18ProMax: 1320.0 / 2868, .iPhone17ProMax: 1320.0 / 2868, .iPhoneAir: 1260.0 / 2736, .iPhone16ProMax: 1320.0 / 2868,
                                                      .iPhone16Plus: 1290.0 / 2796, .iPhone15ProMax: 1290.0 / 2796, .iPhone14ProMax: 1290.0 / 2796]
         for model in Device3DModel.models(.phone) {
             XCTAssertEqual(Device3DRenderer.shared.status(for: model), .ready(hasDisplayMesh: true), model.label)

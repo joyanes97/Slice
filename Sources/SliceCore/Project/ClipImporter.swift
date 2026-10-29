@@ -33,16 +33,26 @@ public enum ClipImporter {
         let name = "video." + (source.pathExtension.isEmpty ? "mov" : source.pathExtension.lowercased())
         try FileManager.default.copyItem(at: source, to: dir.appendingPathComponent(name))
 
-        var audioRel: String?
-        if try await !asset.loadTracks(withMediaType: .audio).isEmpty,
-           let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) {
-            let out = dir.appendingPathComponent("audio.m4a")
-            try await export.export(to: out, as: .m4a)
-            audioRel = "\(rel)/audio.m4a"
-        }
         return Clip(id: id, screenFile: "\(rel)/\(name)", micFile: nil, duration: duration,
                     screenPixelSize: CGSize(width: abs(shown.width), height: abs(shown.height)), captureRect: .zero)
-            .withScreenAudio(audioRel)
+            .withScreenAudio(try await audio(of: asset, into: dir, relative: rel))
+    }
+
+    /// The size a video shows at, turned as it plays.
+    public static func videoSize(of source: URL) async throws -> CGSize {
+        guard let video = try await AVURLAsset(url: source).loadTracks(withMediaType: .video).first else {
+            throw Failure.noVideo(source.lastPathComponent)
+        }
+        let shown = try await video.load(.naturalSize).applying(video.load(.preferredTransform))
+        return CGSize(width: abs(shown.width), height: abs(shown.height))
+    }
+
+    /// The video's sound, saved beside it as the take's screen audio; nil when it has none.
+    static func audio(of asset: AVURLAsset, into dir: URL, relative rel: String) async throws -> String? {
+        guard try await !asset.loadTracks(withMediaType: .audio).isEmpty,
+              let export = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else { return nil }
+        try await export.export(to: dir.appendingPathComponent("audio.m4a"), as: .m4a)
+        return "\(rel)/audio.m4a"
     }
 }
 

@@ -286,10 +286,10 @@ func importInto(_ editor: EditorModel) {
 }
 
 @MainActor
-func chooseVideos() -> [URL]? {
+func chooseVideos(message: String = "Choose videos to add. They're copied into the project.", multiple: Bool = true) -> [URL]? {
     let panel = NSOpenPanel()
     panel.allowedContentTypes = [.movie]
-    panel.allowsMultipleSelection = true
-    panel.message = "Choose videos to add. They're copied into the project."
+    panel.allowsMultipleSelection = multiple
+    panel.message = message
     return panel.runModal() == .OK && !panel.urls.isEmpty ? panel.urls : nil
 }

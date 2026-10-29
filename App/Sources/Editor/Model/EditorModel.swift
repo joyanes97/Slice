@@ -91,6 +91,8 @@ final class EditorModel: ObservableObject {
     var transcribeTask: Task<Void, Never>?
     @Published var audioError: String?
     @Published var importedAudio: [String] = []
+    /// How far a phone's screen recording being taken in has got into its frame.
+    @Published var deviceImportProgress: Double?
     let audition = MusicAudition()
     @Published var smartZoomProgress: Double?
     @Published var smartZoomNote: String?

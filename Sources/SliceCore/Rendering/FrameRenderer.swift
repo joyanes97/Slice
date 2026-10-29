@@ -22,6 +22,8 @@ public final class FrameRenderer: @unchecked Sendable {
         public var backgroundImage: CIImage?
         public var accurateSegmentation = false
         public var captions: [Caption] = []
+        /// The 3D device's pose in place of the timeline's: the preview's, eased towards where it's being turned.
+        public var device3DPlacement: Device3DPlacement?
         var clearBackground = false
         public init(ignoreZoom: Bool = false, hideCamera: Bool = false, backgroundImage: CIImage? = nil,
                     accurateSegmentation: Bool = false, captions: [Caption] = []) {
@@ -80,7 +82,8 @@ public final class FrameRenderer: @unchecked Sendable {
             func stack(_ views: [CGRect]) -> CIImage {
                 let base = placement == nil ? backdrop : CIImage(color: .clear).cropped(to: extent)
                 var layer: CIImage
-                if phone != nil, let drawn = device3DLayer(screen, scene: scene, time: t, view: views[0], ignoreZoom: options.ignoreZoom) {
+                if phone != nil, let drawn = device3DLayer(screen, scene: scene, time: t, view: views[0], ignoreZoom: options.ignoreZoom,
+                                                                  placement: options.device3DPlacement) {
                     layer = drawn.composited(over: base)
                 } else if let warp {
                     let flat = screenStack(screen, over: CIImage(color: .clear).cropped(to: canvas), scene: scene, time: t,

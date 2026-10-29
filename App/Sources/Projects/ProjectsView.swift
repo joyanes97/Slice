@@ -48,8 +48,14 @@ struct ProjectsView: View {
         }
         .dropDestination(for: URL.self) { urls, _ in
             let found = urls.filter(ProjectBundle.isProject)
-            guard !found.isEmpty else { return false }
-            model.openFiles(found)
+            if !found.isEmpty {
+                model.openFiles(found)
+                return true
+            }
+            // Videos you already have (a Simulator recording among them) start a project of their own.
+            let videos = urls.filter { UTType(filenameExtension: $0.pathExtension)?.conforms(to: .movie) ?? false }
+            guard !videos.isEmpty else { return false }
+            model.importNewProject(videos)
             return true
         }
     }

@@ -24,6 +24,7 @@ public enum Device3DKind: String, Codable, CaseIterable {
 public enum Device3DModel: String, Codable, CaseIterable {
     case macBookNeo = "MacBook Neo"
     case macBookAir15 = "MacBook Air 15"
+    case iPhone18ProMax = "iPhone 18 Pro Max"
     case iPhone17ProMax = "iPhone 17 Pro Max"
     case iPhoneAir = "iPhone Air"
     case iPhone16ProMax = "iPhone 16 Pro Max"
@@ -53,9 +54,10 @@ public enum Device3DModel: String, Codable, CaseIterable {
     /// The bundled USDZ, in `Resources/Models`.
     var resource: String { rawValue }
 
-    /// Who made the model (it's used under CC BY 4.0, which asks for credit), and where.
+    /// Who made the model (both its licences ask for credit), and where.
     public var credit: (author: String, url: URL) {
         switch self {
+        case .iPhone18ProMax: ("extraakash", URL(string: "https://sketchfab.com/AakashMansukhani")!)
         case .macBookNeo: ("NeoTech", URL(string: "https://sketchfab.com/markusha3333")!)
         case .iPhone17ProMax, .iPhone16ProMax: ("MajdyModels", URL(string: "https://sketchfab.com/MG990")!)
         case .iPhoneAir: ("Ranguel", URL(string: "https://sketchfab.com/Ranguel")!)
@@ -65,11 +67,20 @@ public enum Device3DModel: String, Codable, CaseIterable {
         }
     }
 
+    /// The licence the model is used under.
+    public var license: (name: String, url: URL) {
+        switch self {
+        case .iPhone18ProMax: ("Sketchfab Standard", URL(string: "https://sketchfab.com/licenses")!)
+        default: ("CC BY 4.0", URL(string: "https://creativecommons.org/licenses/by/4.0/")!)
+        }
+    }
+
     /// The finishes it comes in; the first is the one it's modelled in.
     public var finishes: [Device3DFinish] {
         switch self {
         case .macBookNeo: [.yellow, .silver, .blue, .pink, .green]
         case .macBookAir15: [.spaceGray, .silver, .starlight, .midnight]
+        case .iPhone18ProMax: [.burgundy, .silver, .deepBlue, .spaceBlack]
         case .iPhone17ProMax: [.cosmicOrange, .deepBlue, .silver]
         case .iPhoneAir: [.skyBlue, .lightGold, .cloudWhite, .spaceBlack]
         case .iPhone16ProMax: [.desertTitanium, .blackTitanium, .whiteTitanium, .naturalTitanium]
@@ -79,12 +90,15 @@ public enum Device3DModel: String, Codable, CaseIterable {
         }
     }
 
+    /// A phone whose Dynamic Island is only in its wallpaper, which the recording replaces: Slice draws one.
+    var drawsIsland: Bool { self == .iPhone15ProMax }
+
     /// The display's node, for models whose names don't say which mesh is the screen.
     var displayNode: String? {
         switch self {
         case .macBookNeo: "Glass___Heavy_Color"
         case .macBookAir15: "SadnAkehSlxIwKv"
-        case .iPhone17ProMax, .iPhone16ProMax, .iPhone15ProMax: nil
+        case .iPhone18ProMax, .iPhone17ProMax, .iPhone16ProMax, .iPhone15ProMax: nil
         case .iPhoneAir: nil
         case .iPhone16Plus: "Screen_BG"
         case .iPhone14ProMax: "YbXWdqEcjbfTKuN"
@@ -96,6 +110,7 @@ public enum Device3DModel: String, Codable, CaseIterable {
         switch self {
         case .macBookNeo: SIMD3(0.73, 0.69, 0.26)
         case .macBookAir15: SIMD3(0.32, 0.33, 0.34)
+        case .iPhone18ProMax: SIMD3(0.069, 0.0083, 0.0154)
         case .iPhone17ProMax: SIMD3(0.815, 0.195, 0.060)
         case .iPhoneAir: SIMD3(0.736, 0.914, 1.0)
         case .iPhone16ProMax: SIMD3(0.486, 0.387, 0.325)
@@ -116,12 +131,15 @@ public enum Device3DModel: String, Codable, CaseIterable {
         case .iPhone16ProMax: ["basecolor_001", "metalframe_002", "apple_logo_001"]
         case .iPhone16Plus: ["Back_Cover", "Rim_Buttons"]
         case .iPhone15ProMax: ["Natural_Titanium", "Edge", "Natural_Back_Glass", "Material"]
+        case .iPhone18ProMax: ["COLOUR_Cherry_Antenna", "COLOUR_Cherry_Side_Panel", "COLOUR_Cherry_Apple", "COLOUR_Cherry_Backpanel",
+                               "COLOUR_Cherry_Screws", "COLOUR_Cherry_Aniso", "COLOUR_Cherry_Aniso_0", "COLOUR_Cherry_Side_Button_Detail",
+                               "COLOUR_Cherry_Button_Detail_Border", "COLOUR_Cherry_Side_Panel_Gloss", "COLOUR_Cherry_Plastic"]
         }
     }
 }
 
 public enum Device3DFinish: String, Codable, CaseIterable {
-    case cosmicOrange, deepBlue, silver, deepPurple, spaceBlack, gold
+    case cosmicOrange, deepBlue, silver, deepPurple, spaceBlack, gold, burgundy
     case skyBlue, lightGold, cloudWhite
     case desertTitanium, blackTitanium, whiteTitanium, naturalTitanium, blueTitanium
     case ultramarine, teal, pink, white, black
@@ -136,6 +154,7 @@ public enum Device3DFinish: String, Codable, CaseIterable {
         case .deepPurple: "Deep Purple"
         case .spaceBlack: "Space Black"
         case .gold: "Gold"
+        case .burgundy: "Burgundy"
         case .skyBlue: "Sky Blue"
         case .lightGold: "Light Gold"
         case .cloudWhite: "Cloud White"
@@ -167,6 +186,7 @@ public enum Device3DFinish: String, Codable, CaseIterable {
         case .deepPurple: RGBA(0.37, 0.33, 0.41)
         case .spaceBlack: RGBA(0.23, 0.23, 0.24)
         case .gold: RGBA(0.95, 0.89, 0.78)
+        case .burgundy: RGBA(0.45, 0.17, 0.22)
         case .skyBlue: RGBA(0.75, 0.84, 0.91)
         case .lightGold: RGBA(0.92, 0.86, 0.73)
         case .cloudWhite: RGBA(0.95, 0.95, 0.93)
@@ -198,6 +218,7 @@ public enum Device3DFinish: String, Codable, CaseIterable {
         case .deepPurple: SIMD3(0.199, 0.148, 0.237)
         case .spaceBlack: SIMD3(0.035, 0.034, 0.038)
         case .gold: SIMD3(0.78, 0.60, 0.36)
+        case .burgundy: SIMD3(0.069, 0.0083, 0.0154)
         case .skyBlue: SIMD3(0.70, 0.79, 0.87)
         case .lightGold: SIMD3(0.84, 0.70, 0.48)
         case .cloudWhite: SIMD3(0.86, 0.86, 0.83)

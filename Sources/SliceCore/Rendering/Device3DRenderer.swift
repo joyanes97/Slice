@@ -84,12 +84,22 @@ public final class Device3DRenderer: @unchecked Sendable {
 
     private let thumbnailContext = CIContext(options: [.cacheIntermediates: false])
 
-    /// What thumbnails show on the display.
-    private static let previewScreen: CIImage? = Bundle.module.url(forResource: "preview-model", withExtension: "jpg", subdirectory: "Models")
-        .flatMap { CIImage(contentsOf: $0) }
+    /// What thumbnails show on the display: dark glass with a faint sheen, so the device's shape and finish are what
+    /// reads, not a wallpaper.
+    private static let previewScreen: CIImage? = {
+        let rect = CGRect(x: 0, y: 0, width: 1000, height: 2000)
+        guard let base = CIFilter(name: "CILinearGradient", parameters: [
+            "inputPoint0": CIVector(x: 0, y: rect.height), "inputColor0": CIColor(red: 0.15, green: 0.15, blue: 0.17),
+            "inputPoint1": CIVector(x: 0, y: 0), "inputColor1": CIColor(red: 0.035, green: 0.035, blue: 0.045),
+        ])?.outputImage, let sheen = CIFilter(name: "CILinearGradient", parameters: [
+            "inputPoint0": CIVector(x: 0, y: rect.height), "inputColor0": CIColor(red: 1, green: 1, blue: 1, alpha: 0.09),
+            "inputPoint1": CIVector(x: rect.width, y: rect.height * 0.5), "inputColor1": CIColor(red: 1, green: 1, blue: 1, alpha: 0),
+        ])?.outputImage else { return nil }
+        return sheen.composited(over: base).cropped(to: rect)
+    }()
 
-    /// A still of `model` in `finish` posed as `placement` (centred), `size` pixels, with the preview wallpaper on its
-    /// display and a clear background: for pickers.
+    /// A still of `model` in `finish` posed as `placement` (centred), `size` pixels, with dark glass on its display
+    /// and a clear background: for pickers.
     public func thumbnail(model: Device3DModel, finish: Device3DFinish, placement: Device3DPlacement = .standard,
                           size: CGSize) -> CGImage? {
         var settings = Device3DSettings()
@@ -146,7 +156,7 @@ public final class Device3DRenderer: @unchecked Sendable {
             do {
                 result = .success(try Device3DTemplate(url: url, name: model.label, displayNode: model.displayNode,
                                                        bodyColor: model.bodyColor, bodyMaterials: model.bodyMaterials,
-                                                       laptop: model.kind == .laptop))
+                                                       laptop: model.kind == .laptop, drawsIsland: model.drawsIsland))
             } catch let error as Device3DError {
                 result = .failure(error)
             } catch {

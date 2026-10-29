@@ -14,87 +14,92 @@ struct ModelPicker: View {
     private var s: Device3DSettings { editor.project.device3D }
 
     var body: some View {
-        let kinds = editor.available3DKinds
         VStack(alignment: .leading, spacing: 12) {
-            ForEach(kinds, id: \.self) { kind in
-                if kinds.count > 1 {
-                    Text(kind.label).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
-                }
-                models(Device3DModel.models(kind))
+            HStack {
+                Text("Model").font(.system(size: 13))
+                Spacer()
+                modelMenu
             }
             finishes
+            if s.model.kind == .phone {
+                PanelToggle("Dynamic Island", isOn: Binding(get: { s.dynamicIsland }, set: { editor.project.device3D.dynamicIsland = $0 }))
+            }
         }
     }
 
-    private func models(_ list: [Device3DModel]) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ForEach(list, id: \.self) { model in
-                    let finish = model == s.model ? s.finish : model.finishes[0]
-                    PickerTile(selected: model == s.model, action: {
-                        withAnimation(Theme.swap) { editor.select3DModel(model) }
-                    }) {
-                        VStack(spacing: 6) {
-                            Device3DThumbnail(model: model, finish: finish,
-                                              placement: model.kind == .laptop ? Device3DPlacement(yaw: -20, pitch: -14)
-                                                  : Device3DPlacement(yaw: 24, pitch: 6),
-                                              size: CGSize(width: 64, height: 76))
-                            Text(model.shortLabel)
-                                .font(.system(size: 11, weight: .medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                                .foregroundStyle(model == s.model ? Color.primary : Color.secondary)
-                        }
-                        .padding(.vertical, 8)
+    /// The canvas shows the chosen device large, so the choice itself is a name.
+    private var modelMenu: some View {
+        let kinds = editor.available3DKinds
+        return Menu {
+            ForEach(kinds, id: \.self) { kind in
+                Section(kinds.count > 1 ? kind.label : "") {
+                    ForEach(Device3DModel.models(kind), id: \.self) { model in
+                        Toggle(model.label, isOn: Binding(get: { model == s.model }, set: { _ in
+                            withAnimation(Theme.swap) { editor.select3DModel(model) }
+                        }))
                     }
                 }
             }
+        } label: {
+            HStack(spacing: 5) {
+                Text(s.model.label).lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 9, weight: .semibold)).opacity(0.6)
+            }
+            .font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, 10)
+            .frame(height: 26)
+            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Theme.control))
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
     }
 
     private var finishes: some View {
-            HStack(spacing: 8) {
+        HStack(spacing: 6) {
+            Text("Colour").font(.system(size: 13))
+            Text(s.finish.label)
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .contentTransition(.opacity)
+            Spacer(minLength: 4)
+            HStack(spacing: 2) {
                 ForEach(s.model.finishes, id: \.self) { finish in
                     FinishSwatch(finish: finish, selected: s.finish == finish) {
                         withAnimation(.smooth(duration: 0.25)) { editor.project.device3D.finish = finish }
                     }
                 }
-                Spacer(minLength: 4)
-                Text(s.finish.label)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.opacity)
             }
-            .animation(.smooth(duration: 0.25), value: s.finish)
+        }
+        .animation(.smooth(duration: 0.25), value: s.finish)
     }
 }
 
-/// A rounded tile that lights up with Slice blue when chosen.
-struct PickerTile<Content: View>: View {
-    let selected: Bool
-    let action: () -> Void
-    @ViewBuilder var content: Content
+/// A small quiet button for the 3D tab's one-click actions.
+struct SmallButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { SmallButtonBody(configuration: configuration) }
+}
+
+private struct SmallButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.isEnabled) private var isEnabled
     @State private var hovering = false
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
-        Button(action: action) {
-            content
-                .frame(maxWidth: .infinity)
-                .background(shape.fill(selected ? Theme.accent.opacity(0.12) : hovering ? Theme.controlHover : Theme.control))
-                .overlay(shape.strokeBorder(selected ? Theme.accent.opacity(0.9) : Color.white.opacity(hovering ? 0.1 : 0.04),
-                                            lineWidth: selected ? 1.5 : 1))
-                .contentShape(shape)
-        }
-        .buttonStyle(TilePressStyle())
-        .onHover { hovering = $0 }
-        .animation(Theme.hover, value: hovering)
-        .animation(Theme.hover, value: selected)
-    }
-}
-
-private struct TilePressStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(hovering ? Color.primary : Color.primary.opacity(0.8))
+            .padding(.horizontal, 10)
+            .frame(height: 24)
+            .background(RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(configuration.isPressed ? Theme.thumb : hovering ? Theme.controlHover : Theme.control))
+            .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .opacity(isEnabled ? 1 : 0.4)
+            .onHover { hovering = $0 && isEnabled }
+            .animation(Theme.hover, value: hovering)
             .animation(Theme.press, value: configuration.isPressed)
     }
 }
@@ -111,7 +116,7 @@ private struct FinishSwatch: View {
             Circle()
                 .fill(Color(.sRGB, red: c.r, green: c.g, blue: c.b))
                 .overlay(Circle().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
-                .frame(width: 18, height: 18)
+                .frame(width: 16, height: 16)
                 .padding(3)
                 .overlay(Circle().strokeBorder(selected ? Theme.accent : Color.white.opacity(hovering ? 0.25 : 0), lineWidth: 1.5))
                 .contentShape(Circle())

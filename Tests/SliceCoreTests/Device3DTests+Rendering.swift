@@ -180,8 +180,9 @@ extension Device3DTests {
             let image = render(p, output: out, screen: CIImage(color: Self.magenta).cropped(to: CGRect(origin: .zero, size: Self.portraitCanvas)))
             try write(image, size: out, "3d_narrow_\(model.shortLabel)")
             let px = pixels(image, size: out)
-            // Down the display's near side, where the slice was: still the recording.
-            for y in [700, 800, 880] { close(px(1030, y), Self.magenta, within: 0.15) }
+            // Down the display's near side, where the slice was: still the recording (inside the 18 Pro Max's wider bezel).
+            let x = model == .iPhone18ProMax ? 1000 : 1030
+            for y in [700, 800, 880] { close(px(x, y), Self.magenta, within: 0.15) }
         }
     }
 

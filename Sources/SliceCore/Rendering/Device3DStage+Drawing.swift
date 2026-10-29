@@ -64,6 +64,8 @@ extension Device3DStage {
 
     /// Finish and lights.
     func dress(_ settings: Device3DSettings) {
+        for node in island { node.isHidden = !settings.dynamicIsland }
+        islandPatch?.isHidden = settings.dynamicIsland
         if finish != settings.finish {
             finish = settings.finish
             let native = model.finishes.first == settings.finish

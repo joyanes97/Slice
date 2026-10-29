@@ -1,4 +1,9 @@
-All models are licensed under CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/).
+All models but the iPhone 18 Pro Max are licensed under CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/).
+The iPhone 18 Pro Max is under the Sketchfab Standard licence (https://sketchfab.com/licenses).
+
+iPhone 18 Pro Max.usdz
+"Apple iPhone 18 Pro Max Burgundy 2026" by extraakash (https://sketchfab.com/AakashMansukhani), as credited in the file
+https://sketchfab.com/3d-models/apple-iphone-18-pro-max-burgundy-2026-604acc18b5d5455d820a16359b45b003
 
 MacBook Neo.usdz
 "Apple Macbook Neo 2026" by NeoTech (https://sketchfab.com/markusha3333)
@@ -30,9 +35,6 @@ https://sketchfab.com/3d-models/iphone-15-pro-max-made-in-blender-616945ef6bef41
 iPhone 14 Pro Max.usdz
 "iPhone 14 Pro Max" by akshatmittal (https://sketchfab.com/akshatmittal)
 https://sketchfab.com/3d-models/iphone-14-pro-max-95f11f5a06604c8b9fd44046ae52a9cc
-
-preview-model.jpg
-The wallpaper shown on the phone's display in Slice's model and pose pickers.
 
 Changes, to every model: Slice turns it to face the camera, re-maps the display's texture coordinates, hides any stage
 modelled around the device, recolours the body for other finishes and draws the recording on the display at run time;

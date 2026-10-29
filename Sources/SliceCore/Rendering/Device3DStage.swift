@@ -31,6 +31,9 @@ final class Device3DStage {
     let fill = SCNNode()
     let ambient = SCNNode()
     let displayMaterial = SCNMaterial()
+    /// The Dynamic Island's parts, and the patch of display drawn where it was when it's switched off.
+    var island: [SCNNode] = []
+    let islandPatch: SCNNode?
     var bodyMaterials: [(material: SCNMaterial, color: (diffuse: SIMD3<Float>?, emission: SIMD3<Float>?))] = []
     /// The pictures on textured body parts, to put back for the model's own finish.
     var texturedDiffuse: [ObjectIdentifier: Any] = [:]
@@ -60,6 +63,7 @@ final class Device3DStage {
 
         phone = template.root.clone()
         lid = phone.childNode(withName: Device3DTemplate.lidName, recursively: true)
+        islandPatch = phone.childNode(withName: Device3DTemplate.islandPatchName, recursively: true)
         phone.enumerateHierarchy { node, _ in
             guard let geometry = node.geometry?.copy() as? SCNGeometry else { return }
             geometry.materials = geometry.materials.map { ($0.copy() as? SCNMaterial) ?? $0 }
@@ -94,6 +98,10 @@ final class Device3DStage {
             property.wrapT = .clamp
         }
         phone.childNode(withName: Device3DTemplate.displayName, recursively: true)?.geometry?.materials = [displayMaterial]
+        islandPatch?.geometry?.materials = [displayMaterial]
+        phone.enumerateHierarchy { node, _ in
+            if node.categoryBitMask & Device3DTemplate.islandCategory != 0 { island.append(node) }
+        }
         scene.rootNode.addChildNode(phone)
 
         scene.background.contents = NSColor.clear
@@ -101,7 +109,8 @@ final class Device3DStage {
         for (node, type) in [(key, SCNLight.LightType.directional), (fill, .directional), (ambient, .ambient)] {
             node.light = SCNLight()
             node.light?.type = type
-            node.light?.categoryBitMask = ~Device3DTemplate.glassCategory
+            // Glass the island's parts take in stays out of the studio lights too.
+            node.light?.categoryBitMask = ~(Device3DTemplate.glassCategory | Device3DTemplate.islandCategory)
             scene.rootNode.addChildNode(node)
         }
         camera.projectionDirection = .vertical

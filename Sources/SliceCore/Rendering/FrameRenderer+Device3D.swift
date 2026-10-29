@@ -46,7 +46,8 @@ extension RenderScene {
 extension FrameRenderer {
     /// The 3D phone with its shadow at `t`, seen through `view` (the zoom). Nil draws the moment flat: 3D is off,
     /// this take isn't a device recording, or the model couldn't be loaded.
-    func device3DLayer(_ screen: CIImage, scene: RenderScene, time t: Double, view: CGRect, ignoreZoom: Bool) -> CIImage? {
+    func device3DLayer(_ screen: CIImage, scene: RenderScene, time t: Double, view: CGRect, ignoreZoom: Bool,
+                       placement: Device3DPlacement? = nil) -> CIImage? {
         guard let (settings, clip) = scene.device3D(at: t) else { return nil }
         let renderer = Device3DRenderer.shared
         guard let aspect = renderer.displayAspect(for: settings.model) else { return nil }
@@ -56,7 +57,7 @@ extension FrameRenderer {
         let margin = base * (max(scene.project.style.effectivePadding, 0.04) + 0.03)
         let request = Device3DRequest(
             output: out, view: view, fit: whole.insetBy(dx: margin, dy: margin),
-            pose: settings.pose(at: t, extra: ignoreZoom ? .flat : scene.tilt(at: t)), settings: settings,
+            pose: settings.pose(at: t, extra: ignoreZoom ? .flat : scene.tilt(at: t), placement: placement), settings: settings,
             landscape: clip.isLandscapeDevice, display: displayImage(screen, scene: scene, time: t, clip: clip, aspect: aspect))
         guard let phone = renderer.render(request) else { return nil }
         let opacity = min(max(settings.shadowOpacity, 0), 1)

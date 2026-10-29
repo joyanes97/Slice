@@ -40,6 +40,7 @@ struct PreviewHeader: View {
             if editor.smartZoomProgress != nil || editor.smartZoomNote != nil {
                 SmartZoomStatus(editor: editor)
             }
+            if let p = editor.deviceImportProgress { DeviceImportStatus(progress: p) }
             Spacer()
             Text(hint)
                 .font(.system(size: 12))
@@ -52,6 +53,7 @@ struct PreviewHeader: View {
         .padding(.top, 4)
         .animation(Theme.swap, value: hint)
         .animation(Theme.swap, value: editor.smartZoomProgress == nil)
+        .animation(Theme.swap, value: editor.deviceImportProgress == nil)
         .animation(Theme.swap, value: editor.smartZoomNote)
         .animation(Theme.swap, value: canFit)
     }

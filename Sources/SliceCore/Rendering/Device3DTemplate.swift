@@ -51,7 +51,7 @@ final class Device3DTemplate {
     var radius: Float { simd_length(simd_max(simd_abs(extent.min), simd_abs(extent.max))) }
 
     init(url: URL, name: String, displayNode: String? = nil, bodyColor: SIMD3<Float>? = nil,
-         bodyMaterials: Set<String>? = nil, laptop: Bool = false) throws {
+         bodyMaterials: Set<String>? = nil, laptop: Bool = false, drawsIsland: Bool = false) throws {
         let source: SCNScene
         do {
             source = try SCNScene(url: url, options: [.checkConsistency: false])
@@ -160,10 +160,12 @@ final class Device3DTemplate {
 
         let body = bodyColor ?? SIMD3(0.815, 0.195, 0.060)
         var bodyColors: [String: (diffuse: SIMD3<Float>?, emission: SIMD3<Float>?)] = [:]
+        var veils: [(mesh: SCNNode, outwards: Float)] = []
         for mesh in meshes where mesh.name != Self.displayName {
-            var glass = false
+            var glass = false, veil = false
             // Only glass on the face of the phone is lifted with the display.
-            let onFront = Self.bounds(of: [mesh], in: root).max.z >= bounds.max.z - (bounds.max.z - bounds.min.z) * 0.25
+            let own = Self.bounds(of: [mesh], in: root), depth = bounds.max.z - bounds.min.z
+            let onFront = own.max.z >= bounds.max.z - depth * 0.25
             for material in mesh.geometry?.materials ?? [] {
                 // Some models have faces wound inside out (a back cover that vanishes seen from behind).
                 material.isDoubleSided = true
@@ -199,6 +201,7 @@ final class Device3DTemplate {
                     material.transparent.contents = nil
                     material.transparency = CGFloat(max(opacity, 0.02))
                     material.writesToDepthBuffer = false
+                    veil = veil || !name.contains("lens")
                 }
                 guard let key = material.name else { continue }
                 let glow = Self.linear(material.emission.contents).flatMap { $0.max() > 0.001 ? $0 : nil }
@@ -216,8 +219,13 @@ final class Device3DTemplate {
                 if onFront, let parent = mesh.parent {
                     mesh.simdPosition += parent.simdConvertVector(SIMD3(0, 0, 2 * Self.displayLift), from: root)
                 }
+            } else if veil, !laptop {
+                let outwards: Float = own.min.z <= bounds.min.z + depth * 0.25 ? -1 : onFront ? 1 : 0
+                if outwards != 0 { veils.append((mesh, outwards)) }
             }
         }
+        Self.lift(veils, over: meshes.filter { $0.name != Self.displayName }, in: root)
+        if !laptop { Self.rigIsland(meshes, in: root, draws: drawsIsland) }
 
         let lid = laptop ? Self.rigLid(meshes, opening: lidOpening, in: root) : nil
         self.root = root
@@ -231,6 +239,29 @@ final class Device3DTemplate {
         screenMask = screen?.mask
         self.bodyColors = bodyColors
         bodyLuminance = max((body * SIMD3(0.2126, 0.7152, 0.0722)).sum(), 0.01)
+    }
+
+    /// A see-through layer modelled flush on the body (the iPhone 15 Pro Max's camera plate, on its back glass and
+    /// under its lenses) shares their depth, and they fought over it in blocks that crawled as the phone turned. Each
+    /// is lifted off the face it's on, and what's mounted on it (rings, lenses, flash) lifted twice as far, so the
+    /// stack keeps its order.
+    static func lift(_ veils: [(mesh: SCNNode, outwards: Float)], over meshes: [SCNNode], in root: SCNNode) {
+        var lifted = Set<ObjectIdentifier>()
+        func move(_ node: SCNNode, _ distance: Float) {
+            guard let parent = node.parent, lifted.insert(ObjectIdentifier(node)).inserted else { return }
+            node.simdPosition += parent.simdConvertVector(SIMD3(0, 0, distance), from: root)
+        }
+        let boxes = meshes.map { (node: $0, box: bounds(of: [$0], in: root)) }
+        for (veil, outwards) in veils {
+            let v = bounds(of: [veil], in: root), slack = (v.max - v.min).max() * 0.01
+            for (node, b) in boxes where node !== veil && !veils.contains(where: { $0.mesh === node }) {
+                let within = b.min.x >= v.min.x - slack && b.max.x <= v.max.x + slack
+                    && b.min.y >= v.min.y - slack && b.max.y <= v.max.y + slack
+                let beyond = outwards < 0 ? b.min.z <= v.min.z + slack : b.max.z >= v.max.z - slack
+                if within, beyond { move(node, outwards * 4 * displayLift) }
+            }
+        }
+        for (veil, outwards) in veils { move(veil, outwards * 2 * displayLift) }
     }
 
     static func name(of node: SCNNode) -> String {

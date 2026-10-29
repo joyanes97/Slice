@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import PageShell from "@/components/page-shell";
-import { MODEL_LICENSE, MODELS } from "@/components/credits/content";
+import { MODEL_LICENSE, MODELS, STANDARD_LICENSE } from "@/components/credits/content";
 import { doc } from "@/lib/doc";
 import { pageMetadata } from "@/lib/metadata";
 import { reveal, step } from "@/lib/reveal";
@@ -37,7 +37,11 @@ export default function CreditsPage() {
 						<a href={MODEL_LICENSE.url} target="_blank" rel="noreferrer" className={doc.link}>
 							{MODEL_LICENSE.name}
 						</a>
-						. Thank you.
+						, except the iPhone 18 Pro Max, which is under the{" "}
+						<a href={STANDARD_LICENSE.url} target="_blank" rel="noreferrer" className={doc.link}>
+							{STANDARD_LICENSE.name}
+						</a>{" "}
+						licence. Thank you.
 					</p>
 				</header>
 

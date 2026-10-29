@@ -57,6 +57,8 @@ final class PreviewDriver: @unchecked Sendable {
 
     var shownTime: Double { lock.withLock { shown } }
 
+    var isPlaying: Bool { lock.withLock { playing } }
+
     init(renderState: RenderState) { self.renderState = renderState }
 
     func setSource(_ output: AVPlayerItemVideoOutput, packing: PreviewPacking?) {
@@ -129,6 +131,7 @@ final class PreviewNSView: NSView, CAMetalDisplayLinkDelegate {
     private var lastDrawn: DrawKey?
     private var lastStep: CFTimeInterval?
     private var spring = StyleSpring()
+    private var poseSpring = PoseSpring()
     private var source: PreviewSourceFrame?
     private var sourceCount = 0
     private let shotLock = NSLock()
@@ -259,15 +262,19 @@ final class PreviewNSView: NSView, CAMetalDisplayLinkDelegate {
         lastStep = host
         let inputs = driver.renderState.current()
         let (style, moving) = spring.step(toward: inputs.project.style, dt: dt)
+        // Keyframed playback lands exactly where the export does; any other change of pose is eased into.
+        let device = inputs.project.device3D
+        let (pose, turning) = poseSpring.step(toward: device.enabled ? device.placement(at: moment.time) : nil,
+                                              snap: !device.keyframes.isEmpty && driver.isPlaying, dt: dt)
         let drawable = update.drawable
         let size = CGSize(width: drawable.texture.width, height: drawable.texture.height)
         let key = DrawKey(time: moment.time, version: moment.version, frames: sourceCount, size: size)
-        guard moving || key != lastDrawn else { return }
+        guard moving || turning || key != lastDrawn else { return }
         guard source != nil || inputs.project.clips.isEmpty else { return }
         lastDrawn = key
 
         let scene: RenderScene
-        let options: FrameRenderer.Options
+        var options: FrameRenderer.Options
         if moving {
             var project = inputs.project
             project.style = style
@@ -276,6 +283,7 @@ final class PreviewNSView: NSView, CAMetalDisplayLinkDelegate {
         } else {
             (scene, options) = driver.renderState.snapshot(size: size)
         }
+        options.device3DPlacement = pose
         autoreleasepool {
             let other = driver.renderState.transitionSources(at: source?.time ?? moment.time)
             let image = renderer.render(scene: scene, time: moment.time, screen: source?.screen, camera: source?.camera,

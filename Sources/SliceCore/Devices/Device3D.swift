@@ -183,6 +183,8 @@ public struct Device3DSettings: Codable, Equatable {
     public var scale = 1.0
     /// Degrees a laptop's lid stands open.
     public var lid = Device3DPlacement.openLid
+    /// Whether a phone shows its Dynamic Island.
+    public var dynamicIsland = true
     /// 0 is a long lens (almost flat), 1 a wide one (strong perspective).
     public var perspective = 0.35
     public var animation = Device3DAnimation()
@@ -225,6 +227,7 @@ public struct Device3DSettings: Codable, Equatable {
         position = try c.decodeIfPresent(CGPoint.self, forKey: .position) ?? d.position
         scale = try c.decodeIfPresent(Double.self, forKey: .scale) ?? d.scale
         lid = try c.decodeIfPresent(Double.self, forKey: .lid) ?? d.lid
+        dynamicIsland = try c.decodeIfPresent(Bool.self, forKey: .dynamicIsland) ?? d.dynamicIsland
         perspective = try c.decodeIfPresent(Double.self, forKey: .perspective) ?? d.perspective
         animation = try c.decodeIfPresent(Device3DAnimation.self, forKey: .animation) ?? d.animation
         background = (try? c.decodeIfPresent(Device3DBackground.self, forKey: .background)) ?? d.background
@@ -240,7 +243,7 @@ public struct Device3DSettings: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case enabled, model, finish, yaw, pitch, rotation, position, scale, lid, perspective, animation, background,
+        case enabled, model, finish, yaw, pitch, rotation, position, scale, lid, dynamicIsland, perspective, animation, background,
              backgroundColor, brightness, lightAngle, reflections, shadowOpacity, shadowSoftness, shadowDistance, keyframes
         case tiltDirection, tiltStrength, lean
     }
@@ -256,6 +259,7 @@ public struct Device3DSettings: Codable, Equatable {
         try c.encode(position, forKey: .position)
         try c.encode(scale, forKey: .scale)
         try c.encode(lid, forKey: .lid)
+        try c.encode(dynamicIsland, forKey: .dynamicIsland)
         try c.encode(perspective, forKey: .perspective)
         try c.encode(animation, forKey: .animation)
         try c.encode(background, forKey: .background)
@@ -341,10 +345,11 @@ public struct Device3DSettings: Codable, Equatable {
         return Self.fieldOfView.lowerBound + (Self.fieldOfView.upperBound - Self.fieldOfView.lowerBound) * f
     }
 
-    /// The phone's pose at `t` on the edited timeline. `extra` is a zoom's own tilt, added on top.
-    public func pose(at t: Double, extra: ScreenTilt = .flat) -> Device3DPose {
+    /// The phone's pose at `t` on the edited timeline. `extra` is a zoom's own tilt, added on top; `placement` stands
+    /// in for the keyframes' (or controls') pose there.
+    public func pose(at t: Double, extra: ScreenTilt = .flat, placement: Device3DPlacement? = nil) -> Device3DPose {
         let radians = Double.pi / 180
-        let base = placement(at: t)
+        let base = placement ?? self.placement(at: t)
         var yaw = base.yaw * radians
         var pitch = base.pitch * radians
         var drift = CGPoint.zero
